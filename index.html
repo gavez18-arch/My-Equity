@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gavez</title>
+<meta name="description" content="Catat pemasukan dan pengeluaran dalam hitungan detik.">
+<meta name="theme-color" content="#0a0c0b">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gavez">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="preload" href="fonts/plus-jakarta-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Layar kunci PIN -->
+<div id="lock" class="lock" hidden>
+  <form id="lock-form" class="lock-box" autocomplete="off">
+    <img src="icons/icon-192.png" alt="" width="64" height="64">
+    <h1 data-i18n="lock_title">Masukkan PIN</h1>
+    <input id="lock-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" aria-label="PIN" autocomplete="off">
+    <p id="lock-error" class="field-error" role="alert"></p>
+    <button class="btn primary" type="submit" data-i18n="unlock">Buka</button>
+    <button class="btn link" type="button" data-act="forgot-pin" data-i18n="forgot_pin">Lupa PIN</button>
+  </form>
+</div>
+
+<!-- Isi halaman (diisi oleh app.js). Hanya bagian ini yang bisa di-scroll. -->
+<main id="view" class="view" tabindex="-1"></main>
+
+<!-- Navigasi bawah -->
+<nav class="tabbar" aria-label="Menu">
+  <button class="tab" data-tab="home" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5V19a1.5 1.5 0 0 1-1.5 1.5H15V15H9v5.5H5.5A1.5 1.5 0 0 1 4 19z"/></svg>
+    <span data-i18n="tab_home">Beranda</span>
+  </button>
+  <button class="tab" data-tab="history">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14M5 12h14M5 17.5h9"/></svg>
+    <span data-i18n="tab_history">Riwayat</span>
+  </button>
+  <button class="fab" data-act="add" data-i18n-aria="add_tx" aria-label="Tambah transaksi">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+  <button class="tab" data-tab="wallet">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H17a1 1 0 0 1 1 1v2"/><path d="M4 8.5V17a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6.5"/><path d="M16 14h.5"/></svg>
+    <span data-i18n="tab_wallet">Dompet</span>
+  </button>
+  <button class="tab" data-tab="assets">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l5.5-5.5 4 4L20 9"/><path d="M15 9h5v5"/></svg>
+    <span data-i18n="tab_assets">Aset</span>
+  </button>
+</nav>
+
+<!-- Form tambah / ubah transaksi -->
+<div id="sheet-wrap" class="sheet-wrap" hidden>
+  <div class="backdrop" data-act="close-sheet"></div>
+  <form id="tx-form" class="sheet" novalidate autocomplete="off" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-head">
+      <h2 id="sheet-title">Tambah transaksi</h2>
+      <button type="button" class="icon-btn" data-act="close-sheet" data-i18n-aria="close" aria-label="Tutup">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="segmented" role="group">
+      <button type="button" data-type="expense" aria-pressed="true" data-i18n="expense">Pengeluaran</button>
+      <button type="button" data-type="income" aria-pressed="false" data-i18n="income">Pemasukan</button>
+    </div>
+
+    <label class="amount-field">
+      <span class="sr-only" data-i18n="amount">Nominal</span>
+      <span class="rp" aria-hidden="true">Rp</span>
+      <input id="f-amount" type="text" inputmode="numeric" placeholder="0" aria-describedby="e-amount" enterkeyhint="done">
+    </label>
+    <p id="e-amount" class="field-error" role="alert"></p>
+
+    <p class="field-label" id="l-cat" data-i18n="category">Kategori</p>
+    <div id="f-cats" class="chips" role="group" aria-labelledby="l-cat"></div>
+    <p id="e-cat" class="field-error" role="alert"></p>
+
+    <p class="field-label" id="l-wal" data-i18n="wallet">Dompet</p>
+    <div id="f-wallets" class="chips" role="group" aria-labelledby="l-wal"></div>
+
+    <div class="row-2">
+      <label class="field">
+        <span class="field-label" data-i18n="date">Tanggal</span>
+        <input id="f-date" type="date" required>
+      </label>
+      <label class="field">
+        <span class="field-label" data-i18n="note_opt">Catatan (opsional)</span>
+        <input id="f-note" type="text" maxlength="120" data-i18n-ph="note_ph" enterkeyhint="done">
+      </label>
+    </div>
+    <p id="e-date" class="field-error" role="alert"></p>
+
+    <div class="sheet-actions">
+      <button type="button" id="f-delete" class="btn danger-ghost" data-act="delete-tx" data-i18n="delete" hidden>Hapus</button>
+      <button type="submit" id="f-save" class="btn primary grow">Simpan</button>
+    </div>
+  </form>
+</div>
+
+<!-- Form tambah / ubah aset -->
+<div id="asset-wrap" class="sheet-wrap" hidden>
+  <div class="backdrop" data-act="close-asset"></div>
+  <form id="asset-form" class="sheet" novalidate autocomplete="off" role="dialog" aria-modal="true" aria-labelledby="asset-title">
+    <div class="sheet-head">
+      <h2 id="asset-title">Tambah aset</h2>
+      <button type="button" class="icon-btn" data-act="close-asset" data-i18n-aria="close" aria-label="Tutup">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <p class="field-label first" id="l-kind" data-i18n="asset_kind">Jenis aset</p>
+    <div id="a-kinds" class="chips" role="group" aria-labelledby="l-kind"></div>
+
+    <label class="amount-field">
+      <span class="sr-only" data-i18n="buy_price">Harga beli</span>
+      <span class="rp" aria-hidden="true">Rp</span>
+      <input id="a-amount" type="text" inputmode="numeric" placeholder="0" data-money aria-describedby="e-asset" enterkeyhint="done">
+    </label>
+    <p class="hint" data-i18n="buy_hint">Isi harga beli, atau dana yang kamu tempatkan.</p>
+    <p id="e-asset" class="field-error" role="alert"></p>
+
+    <label class="field">
+      <span class="field-label" data-i18n="name_opt">Nama (opsional)</span>
+      <input id="a-name" type="text" maxlength="40" enterkeyhint="done">
+    </label>
+
+    <div class="sheet-actions">
+      <button type="button" id="a-delete" class="btn danger-ghost" data-act="delete-asset" data-i18n="delete" hidden>Hapus</button>
+      <button type="submit" id="a-save" class="btn primary grow">Simpan</button>
+    </div>
+  </form>
+</div>
+
+<!-- Dialog konfirmasi -->
+<div id="dialog" class="dialog-wrap" hidden>
+  <div class="backdrop"></div>
+  <form class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-title" autocomplete="off">
+    <h2 id="dlg-title"></h2>
+    <p id="dlg-text"></p>
+    <input id="dlg-input" hidden>
+    <div class="dialog-actions">
+      <button type="button" class="btn ghost" id="dlg-cancel">Batal</button>
+      <button type="submit" class="btn primary" id="dlg-ok">OK</button>
+    </div>
+  </form>
+</div>
+
+<input id="restore-file" type="file" accept=".json,application/json" hidden>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
